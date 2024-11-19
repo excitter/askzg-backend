@@ -2,7 +2,7 @@ package hr.askzg.service
 
 import hr.askzg.db.*
 import hr.askzg.util.asMap
-import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
@@ -47,7 +47,7 @@ object ProductService : BasicService<Product, Products>(Products) {
             ProductParticipations.insert { mapInsert(it, pp) }
         }
         val toDeleteIds = result.second.map { it.id!! }
-        toDeleteIds.map { EntityID(it, ProductParticipations) }.forEach { pp ->
+        toDeleteIds.map { EntityID<Int>(it, ProductParticipations) }.forEach { pp ->
             Payments.deleteWhere { Payments.productParticipation eq pp }
         }
         ProductParticipations.deleteWhere { ProductParticipations.id inList toDeleteIds }
@@ -62,7 +62,7 @@ object ProductService : BasicService<Product, Products>(Products) {
         val member = MemberService.get(participation.memberId)
 
         if (participation.paid) {
-            Payments.deleteWhere { Payments.productParticipation eq EntityID(participation.id, ProductParticipations) }
+            Payments.deleteWhere { Payments.productParticipation eq EntityID<Int>(participation.id!!, ProductParticipations) }
         } else {
             PaymentService.save(Payment().apply {
                 amount = product.price.toBigDecimal().setScale(2)

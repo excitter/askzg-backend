@@ -1,13 +1,14 @@
 package hr.askzg.db
 
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SizedIterable
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.joda.time.DateTime
 import java.math.BigDecimal
+import org.jetbrains.exposed.sql.jodatime.datetime
 
 typealias ID = Int
 

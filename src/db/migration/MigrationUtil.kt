@@ -44,7 +44,7 @@ object MigrationUtil {
     }
 
     private fun checkConnection() = transaction {
-        if (!TransactionManager.current().connection.isValid(2)) throw Error("No connection for migration!")
+        if (TransactionManager.current().connection.isClosed) throw Error("No connection for migration!")
     }
 
     private fun checkMigrationTable() = transaction {
