@@ -57,6 +57,7 @@ dependencies {
     implementation("joda-time:joda-time:$jodatime_version")
 
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation "org.jetbrains.exposed:exposed-jodatime:$exposed_version"
 }
 
