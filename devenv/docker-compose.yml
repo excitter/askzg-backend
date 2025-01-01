@@ -13,7 +13,7 @@ services:
     image: askzg-frontend:latest
     ports:
       - "8090:80"
-    restart: on-faliure
+    restart: on-failure
     networks:
       - app-network
     depends_on:
@@ -24,7 +24,7 @@ services:
     image: askzg-backend:latest
     ports:
       - "8080:8080"
-    restart: on-faliure
+    restart: on-failure
     networks:
       - app-network
     depends_on:
