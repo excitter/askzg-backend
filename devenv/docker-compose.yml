@@ -3,17 +3,49 @@ version: '3.8'
 volumes:
   postgres_data:
 
+networks:
+  app-network:
+    driver: bridge
+
 services:
+
+  frontend:
+    image: askzg-frontend:latest
+    ports:
+      - "8090:80"
+    restart: on-faliure
+    networks:
+      - app-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    image: askzg-backend:latest
+    ports:
+      - "8080:8080"
+    restart: on-faliure
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .backend.env
+        required: true
+
   db:
     build:
       context: ./db
       dockerfile: Dockerfile
     container_name: dev-postgres
+    restart: on-failure
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
-    environment:
-      - POSTGRES_USER=devuser
-      - POSTGRES_PASSWORD=devpassword
-      - POSTGRES_DB=askzgdb
+    networks:
+      - app-network
+    env_file:
+      - path: .db.env
+        required: true

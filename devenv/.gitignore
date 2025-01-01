@@ -1,1 +1,3 @@
 db/db.dump
+.db.env
+.backend.env
