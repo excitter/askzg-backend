@@ -96,6 +96,7 @@ object Members : AppTable<Member>("members") {
     val status = enumerationByName("status", 200, Status::class)
     val membership = integer("membership")
     val oib = varchar("oib", 30).nullable()
+    val idCardNumber = varchar("id_card_number", 30).nullable()
     val firstName = varchar("first_name", 30).nullable()
     val lastName = varchar("last_name", 30).nullable()
     val dateOfBirth = datetime("date_of_birth").nullable()
@@ -108,6 +109,7 @@ object Members : AppTable<Member>("members") {
         status = row[Members.status]
         membership = row[Members.membership]
         oib = row[Members.oib]
+        idCardNumber = row[Members.idCardNumber]
         firstName = row[Members.firstName]
         lastName = row[Members.lastName]
         dateOfBirth = row[Members.dateOfBirth]
@@ -120,6 +122,7 @@ object Members : AppTable<Member>("members") {
         stmt[status] = entity.status
         stmt[membership] = entity.membership
         stmt[oib] = entity.oib
+        stmt[idCardNumber] = entity.idCardNumber
         stmt[firstName] = entity.firstName
         stmt[lastName] = entity.lastName
         stmt[dateOfBirth] = entity.dateOfBirth
@@ -133,6 +136,7 @@ class Member : Entity() {
     lateinit var status: Status
     var membership: Int = 100
     var oib: String? = null
+    var idCardNumber: String? = null
     var firstName: String? = null
     var lastName: String? = null
     var dateOfBirth: DateTime? = null
@@ -200,6 +204,7 @@ object Events : AppTable<Event>("events") {
     val name = varchar("name", 50)
     val type = enumerationByName("type", 20, EventType::class)
     val date = datetime("date")
+    val endDate = datetime("end_date")
     val price = integer("price").nullable()
     val includeInStatistics = bool("include_in_statistics")
 
@@ -208,6 +213,7 @@ object Events : AppTable<Event>("events") {
         name = row[Events.name]
         type = row[Events.type]
         date = row[Events.date]
+        endDate = row[Events.endDate]
         price = row[Events.price]
         includeInStatistics = row[Events.includeInStatistics]
     }
@@ -216,6 +222,7 @@ object Events : AppTable<Event>("events") {
         stmt[name] = entity.name
         stmt[type] = entity.type
         stmt[date] = entity.date
+        stmt[endDate] = entity.endDate
         stmt[price] = entity.price
         stmt[includeInStatistics] = entity.includeInStatistics
     }
@@ -225,6 +232,7 @@ class Event : Entity() {
     lateinit var name: String
     lateinit var type: EventType
     lateinit var date: DateTime
+    lateinit var endDate: DateTime
     var price: Int? = null
     var participation: List<EventParticipation> = listOf()
     var includeInStatistics: Boolean = true

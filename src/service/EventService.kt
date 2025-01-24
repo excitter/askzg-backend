@@ -31,6 +31,9 @@ object EventService : BasicService<Event, Events>(Events) {
     override fun save(entity: Event) = if (entity.id == null) add(entity) else update(entity)
 
     private fun add(event: Event) = transaction {
+        if (event.endDate < event.date) {
+            throw IllegalArgumentException("Ending date (${event.endDate}) < (${event.date}) starting date")
+        }
         val id = Events.insertAndGetId {
             mapInsert(it, event)
         }.value
