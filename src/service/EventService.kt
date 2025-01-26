@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import util.RecordUtil
+import java.math.BigDecimal
 
 object EventService : BasicService<Event, Events>(Events) {
 
@@ -31,9 +32,7 @@ object EventService : BasicService<Event, Events>(Events) {
     override fun save(entity: Event) = if (entity.id == null) add(entity) else update(entity)
 
     private fun add(event: Event) = transaction {
-        if (event.endDate < event.date) {
-            throw IllegalArgumentException("Ending date (${event.endDate}) < (${event.date}) starting date")
-        }
+        event.validate()
         val id = Events.insertAndGetId {
             mapInsert(it, event)
         }.value
@@ -43,10 +42,25 @@ object EventService : BasicService<Event, Events>(Events) {
                 mapInsert(it, ep)
             }
         }
+        if (event.price != null && event.price != 0) {
+            val cost = calculateExpense(event)
+            val cost_id = Payments.insertAndGetId {
+                mapInsert(it, cost)
+            }.value
+            val expense = EventExpense().apply {
+                eventId = id
+                paymentId = cost_id
+                autoCalculated = true
+            }
+            EventExpenses.insert {
+                mapInsert(it, expense)
+            }
+        }
         get(id)
     }
 
     private fun update(event: Event) = transaction {
+        event.validate()
         val id = event.id!!
         Events.update({ Events.id eq id }) {
             mapUpdate(it, event)

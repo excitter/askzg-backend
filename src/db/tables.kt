@@ -235,7 +235,59 @@ class Event : Entity() {
     lateinit var endDate: DateTime
     var price: Int? = null
     var participation: List<EventParticipation> = listOf()
+    var expenses: List<EventExpense> = listOf()
     var includeInStatistics: Boolean = true
+
+    fun validate() {
+        require(endDate >= date) { "End date must be greater than or equal to start date" }
+    }
+
+    fun addExpense(expense: EventExpense) {
+        expenses += expense
+    }
+
+}
+
+fun calculateExpense(event: Event): Payment {
+    val totalParticipants = event.participation.size
+    val eventPrice = event.price ?: 0
+    val totalCost = - BigDecimal(totalParticipants * eventPrice)
+    val info = "TROŠAK - ${event.name}"
+
+    return Payment().apply {
+        amount = totalCost
+        date = event.date
+        comment = info
+        membershipId = null
+        productParticipationId = null
+        timestamp= event.date.millis
+        canEdit = false
+    }
+}
+
+class EventExpense : Entity() {
+    var eventId: Int = -1
+    var paymentId: Int = -1
+    var autoCalculated: Boolean = true
+}
+
+object EventExpenses: AppTable<EventExpense>("event_expenses") {
+    val event = reference("event_id", Events, ReferenceOption.CASCADE, ReferenceOption.CASCADE)
+    val payment = reference("payment_id", Payments, ReferenceOption.CASCADE, ReferenceOption.CASCADE)
+    val autoCalculated = bool("auto_calculated")
+
+    override fun map(row: ResultRow) = EventExpense().apply {
+        id = row[EventExpenses.id].value
+        eventId = row[event].value
+        paymentId = row[payment].value
+        autoCalculated = row[EventExpenses.autoCalculated]
+    }
+
+    override fun mapInsert(stmt: UpdateBuilder<*>, entity: EventExpense) {
+        stmt[event] = EntityID(entity.eventId, Events)
+        stmt[payment] = EntityID(entity.paymentId, Payments)
+        stmt[autoCalculated] = entity.autoCalculated
+    }
 }
 
 object EventParticipations : AppTable<EventParticipation>("event_participation") {
