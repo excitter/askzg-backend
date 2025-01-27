@@ -21,6 +21,7 @@ fun calculateExpense(event: Event): Payment {
         date = event.date
         comment = info
         membershipId = null
+        eventParticipationId = null
         productParticipationId = null
         timestamp= event.date.millis
         canEdit = false
@@ -62,7 +63,35 @@ object EventService : BasicService<Event, Events>(Events) {
         events
     }
 
+    private fun clearInherentExpenses(id: Int) {
+        val oldExpenses = EventExpenses.select { EventExpenses.event eq id and(EventExpenses.autoCalculated eq true)}.map(EventExpenses)
+        Payments.deleteWhere { Payments.id inList oldExpenses.map { EntityID<Int>(it.paymentId, Payments) } }
+    }
+
+    // NOTE: we explicitly do not delete payments, since this is the responsibility of the user
+    override fun delete(id: Int) = transaction {
+        clearInherentExpenses(id)
+        super.delete(id)
+    }
+
     override fun save(entity: Event) = if (entity.id == null) add(entity) else update(entity)
+
+    private fun addInherentExpense(event: Event, eId: Int) = transaction {
+        if (event.price != null && event.price != 0) {
+            val cost = calculateExpense(event)
+            val costId = Payments.insertAndGetId {
+                mapInsert(it, cost)
+            }.value
+            val expense = EventExpense().apply {
+                eventId = eId
+                paymentId = costId
+                autoCalculated = true
+            }
+            EventExpenses.insert {
+                mapInsert(it, expense)
+            }
+        }
+    }
 
     private fun add(event: Event) = transaction {
         event.validate()
@@ -75,26 +104,16 @@ object EventService : BasicService<Event, Events>(Events) {
                 mapInsert(it, ep)
             }
         }
-        if (event.price != null && event.price != 0) {
-            val cost = calculateExpense(event)
-            val cost_id = Payments.insertAndGetId {
-                mapInsert(it, cost)
-            }.value
-            val expense = EventExpense().apply {
-                eventId = id
-                paymentId = cost_id
-                autoCalculated = true
-            }
-            EventExpenses.insert {
-                mapInsert(it, expense)
-            }
-        }
+        addInherentExpense(event, id)
         get(id)
     }
 
     private fun update(event: Event) = transaction {
         event.validate()
         val id = event.id!!
+
+        clearInherentExpenses(id)
+
         Events.update({ Events.id eq id }) {
             mapUpdate(it, event)
         }
@@ -114,6 +133,7 @@ object EventService : BasicService<Event, Events>(Events) {
                 }
             }
         }
+        addInherentExpense(event, id)
         EventParticipations.deleteWhere { EventParticipations.id inList result.second.map { it.id!! } }
         get(id)
     }
