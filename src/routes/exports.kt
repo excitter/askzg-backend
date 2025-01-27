@@ -40,13 +40,22 @@ fun Route.exports() {
 
         get("payments") {
             val year = call.year()
-            val filter = paymentFilter(call.boolParam("income"), call.boolParam("expense"), call.param("word"))
+            val income = call.boolParam("income")
+            val expense = call.boolParam("expense")
+            val format = call.param("word")
+
+            var title = "promet"
+            if (income && !expense) title = "promet"
+            if (!income && expense) title = "promet"
+
+            val filter = paymentFilter(income, expense, format)
             val interval = yearRange(year, DateTime.now())
             val payments = PaymentService.getFiltered(interval.first, interval.second)
             val balance = PaymentService.getBalance(interval.first)
-            call.response.header("Content-Disposition", "attachment; filename=placanja-$year.pdf")
+
+            call.response.header("Content-Disposition", "attachment; filename=$title-$year.pdf")
             call.respondOutputStream {
-                PaymentPdfCreator(PaymentPdfData(payments, balance, interval, filter)).streamTo(this)
+                PaymentPdfCreator(PaymentPdfData(payments, balance, interval, filter, title)).streamTo(this)
             }
         }
 

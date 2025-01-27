@@ -119,5 +119,6 @@ data class PaymentPdfData(
     val payments: List<Payment>,
     val balance: BigDecimal,
     val interval: Pair<DateTime, DateTime>,
-    val filter: (Payment) -> Boolean
+    val filter: (Payment) -> Boolean,
+    val title: String
 )
