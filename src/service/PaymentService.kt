@@ -45,6 +45,11 @@ object PaymentService : BasicService<Payment, Payments>(Payments) {
                 it[paid] = false
             }
         }
+        existing.eventParticipationId?.let {m ->
+            EventParticipations.update({ EventParticipations.id eq m}) {
+                it[paid] = false
+            }
+        }
         Payments.deleteWhere { Payments.id eq id }
     }
 }

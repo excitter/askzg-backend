@@ -2,11 +2,44 @@ package hr.askzg.service
 
 import hr.askzg.db.*
 import hr.askzg.util.asMap
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import util.RecordUtil
 import java.math.BigDecimal
+
+
+fun calculateExpense(event: Event): Payment {
+    val totalParticipants = event.participation.size
+    val eventPrice = event.price ?: 0
+    val totalCost = - BigDecimal(totalParticipants * eventPrice)
+    val info = "DOGAĐAJ trošak - ${event.name}"
+
+    return Payment().apply {
+        amount = totalCost
+        date = event.date
+        comment = info
+        membershipId = null
+        productParticipationId = null
+        timestamp= event.date.millis
+        canEdit = false
+    }
+}
+
+fun memberPaidShareOfEvent(event: Event, member: Member, ts: DateTime): Payment {
+    val memberSlice = event.price ?: 0
+    val info = "${event.name} - ${member.name}"
+    return Payment().apply{
+        amount = BigDecimal(memberSlice)
+        date = ts
+        comment = info
+        membershipId = null
+        productParticipationId = null
+        timestamp = ts.millis
+        canEdit = false
+    }
+}
 
 object EventService : BasicService<Event, Events>(Events) {
 
@@ -65,12 +98,12 @@ object EventService : BasicService<Event, Events>(Events) {
         Events.update({ Events.id eq id }) {
             mapUpdate(it, event)
         }
-        val existing = EventParticipations.select { EventParticipations.event eq id }.map(EventParticipations)
+        val previousParticipations = EventParticipations.select { EventParticipations.event eq id }.map(EventParticipations)
             .asMap { it.id!! to it }
-        val result = RecordUtil.analyzeEntities(existing.values, event.participation)
+        val result = RecordUtil.analyzeEntities(previousParticipations.values, event.participation)
         result.first.forEach {
             it.eventId = id
-            it.paid = existing[it.id]?.paid ?: false
+            it.paid = previousParticipations[it.id]?.paid ?: false
         }
         result.first.forEach { ep ->
             if (ep.id == null) {
@@ -86,11 +119,28 @@ object EventService : BasicService<Event, Events>(Events) {
     }
 
     fun togglePaid(memberId: ID, eventId: ID) = transaction {
-        val participation = EventParticipations.map(
-            EventParticipations
-                .select { EventParticipations.member eq memberId and (EventParticipations.event eq eventId) }.single()
-        )
-        EventParticipations.update({ EventParticipations.id eq participation.id!! }) {
+        val participation =
+            EventParticipations.select { EventParticipations.member eq memberId and (EventParticipations.event eq eventId) }
+                .single().map(EventParticipations)
+        val event = get(eventId)
+        val member = MemberService.get(participation.memberId)
+
+        val event_price = event.price ?: 0
+        if (event_price != 0) {
+            if (participation.paid) {
+                // toggle off
+                Payments.deleteWhere { Payments.eventParticipation eq EntityID<Int>(participation.id!!, EventParticipations) }
+            } else {
+                // toggle on
+                PaymentService.save(Payment().apply {
+                    amount = event_price.toBigDecimal().setScale(2)
+                    date = DateTime.now()
+                    comment = "UDIO ${member.name} - ${event.name}"
+                    eventParticipationId = participation.id
+                })
+            }
+        }
+        EventParticipations.update({ EventParticipations.id eq participation.id }) {
             it[paid] = !participation.paid
         }
         Unit

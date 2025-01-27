@@ -248,22 +248,6 @@ class Event : Entity() {
 
 }
 
-fun calculateExpense(event: Event): Payment {
-    val totalParticipants = event.participation.size
-    val eventPrice = event.price ?: 0
-    val totalCost = - BigDecimal(totalParticipants * eventPrice)
-    val info = "TROŠAK - ${event.name}"
-
-    return Payment().apply {
-        amount = totalCost
-        date = event.date
-        comment = info
-        membershipId = null
-        productParticipationId = null
-        timestamp= event.date.millis
-        canEdit = false
-    }
-}
 
 class EventExpense : Entity() {
     var eventId: Int = -1
@@ -388,6 +372,7 @@ object Payments : AppTable<Payment>("payments") {
         ReferenceOption.SET_NULL,
         ReferenceOption.SET_NULL
     ).nullable()
+    val eventParticipation = reference("event_participation_id", EventParticipations, ReferenceOption.SET_NULL, ReferenceOption.SET_NULL).nullable()
 
     override fun map(row: ResultRow) = Payment().apply {
         id = row[Payments.id].value
@@ -396,8 +381,9 @@ object Payments : AppTable<Payment>("payments") {
         comment = row[Payments.comment]
         membershipId = row[membership]?.value
         productParticipationId = row[productParticipation]?.value
+        eventParticipationId = row[eventParticipation]?.value
         timestamp = row[Payments.date].millis
-        canEdit = membershipId == null && productParticipationId == null
+        canEdit = membershipId == null && productParticipationId == null && eventParticipationId == null
     }
 
     override fun mapInsert(stmt: UpdateBuilder<*>, entity: Payment) {
@@ -410,6 +396,9 @@ object Payments : AppTable<Payment>("payments") {
         entity.productParticipationId?.let {
             stmt[productParticipation] = EntityID(it, ProductParticipations)
         }
+        entity.eventParticipationId?.let {
+            stmt[eventParticipation] = EntityID(it, EventParticipations)
+        }
     }
 }
 
@@ -419,6 +408,7 @@ class Payment : Entity() {
     var comment = ""
     var membershipId: Int? = null
     var productParticipationId: Int? = null
+    var eventParticipationId: Int? = null
     var timestamp: Long? = null
     var canEdit: Boolean = false
 }
