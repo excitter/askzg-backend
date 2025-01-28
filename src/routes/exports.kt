@@ -61,7 +61,7 @@ fun Route.exports() {
 
         get("report") { _ ->
             val year = call.year()
-            val onlyActive = call.request.queryParameters["income"]?.toBoolean() ?: false
+            val onlyActive = call.request.queryParameters["onlyActive"]?.toBoolean() ?: false
             val eventReport = ReportService.getEventReport(Year.of(year))
             val membershipReport = ReportService.getMembershipReport(Year.of(year), onlyActive).filter {
                 it.paidMonths.size != 12 && (onlyActive || it.member.status != Status.INACTIVE || it.unpaidMonths.isNotEmpty())
@@ -73,6 +73,7 @@ fun Route.exports() {
         }
 
         get("statistics") { _ ->
+            // TODO: change this to a table export per event type such as statistics page
             val year = call.year()
             val onlyActive = call.request.queryParameters["income"]?.toBoolean() ?: false
             val request = MemberStatisticsRequest(setOf(), setOf(EventType.TRAINING), setOf(Year.of(year)))

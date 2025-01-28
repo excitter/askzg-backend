@@ -35,7 +35,7 @@ object ReportService {
     }
 
     fun getEventReport(year: Year) = transaction {
-        val events = EventService.getByYear(year.value).filter { it.type == EventType.EVENT && it.includeInStatistics }
+        val events = EventService.getByYear(year.value).filter { it.includeInStatistics && it.price != null && it.price!! > 0 }
         val eventParticipations =
             EventParticipations.select { EventParticipations.event inList events.ids() }.map(EventParticipations)
         val memberIds = eventParticipations.map { it.memberId }.toSet()
