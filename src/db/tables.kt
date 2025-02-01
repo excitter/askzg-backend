@@ -199,6 +199,22 @@ class Membership : Entity() {
     var year: Int = 2015
 }
 
+fun getGreatherOrEqualPriority(et: EventType): Set<EventType> {
+    return when(et) {
+        EventType.EVENT -> setOf(EventType.EVENT)
+        EventType.TRAINING -> setOf(EventType.EVENT, EventType.TRAINING)
+        EventType.OTHER -> setOf(EventType.EVENT, EventType.TRAINING, EventType.OTHER)
+    }
+}
+
+fun getLessOrEqualPriority(et: EventType): Set<EventType> {
+    return when(et) {
+        EventType.EVENT -> setOf(EventType.EVENT, EventType.TRAINING, EventType.OTHER)
+        EventType.TRAINING -> setOf(EventType.TRAINING, EventType.OTHER)
+        EventType.OTHER -> setOf(EventType.OTHER)
+    }
+}
+
 object Events : AppTable<Event>("events") {
 
     val name = varchar("name", 50)

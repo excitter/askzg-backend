@@ -76,6 +76,14 @@ object EventService : BasicService<Event, Events>(Events) {
 
     override fun save(entity: Event) = if (entity.id == null) add(entity) else update(entity)
 
+    private fun getConcurrentEvents(event: Event): List<Event> = transaction {
+        // might need to geo index this
+        // before | after
+        Events.select{ not(Events.endDate less(event.date)) and(not(Events.date greater(event.endDate))) }
+            .map(Events).filter { it.id != event.id }
+            .toList()
+    }
+
     private fun addInherentExpense(event: Event, eId: Int) = transaction {
         if (event.price != null && event.price != 0) {
             val cost = calculateExpense(event)
@@ -93,18 +101,62 @@ object EventService : BasicService<Event, Events>(Events) {
         }
     }
 
+    private fun addParticipations(eps: Iterable<EventParticipation>) {
+        for(ep in eps) {
+            if (ep.id == null) {
+                EventParticipations.insert { mapInsert(it, ep) }
+            } else {
+                EventParticipations.update({ EventParticipations.id eq ep.id!! }) {
+                    mapUpdate(it, ep)
+                }
+            }
+        }
+    }
+
+    private fun updateConcurrentAttendance(event: Event, deleted: List<EventParticipation>) {
+        // every user whos participation in this event is ATTENDED
+        // will have their participation in the concurrent events set to UNABLE_TO_ATTEND
+        exposedLogger.error("Updating for: ${event.id} ${event.name}")
+
+        val concurrentEvents: Set<Int> = getConcurrentEvents(event).map { it.id!! }.toSet()
+        if (concurrentEvents.size == 0) return
+        exposedLogger.error("Concurrent events: ${concurrentEvents}")
+
+        val attendingMemberIDs: Set<Int> = event.participation
+            .filter { it.type == ParticipationType.ATTENDED }
+            .map { it.memberId }
+            .toSet()
+        exposedLogger.error("Attending members: ${attendingMemberIDs}")
+
+        val affectedParticipations = EventParticipations
+            .select{ EventParticipations.member inList(attendingMemberIDs) and(EventParticipations.event inList(concurrentEvents))}
+            .map(EventParticipations)
+        exposedLogger.error("Affected participations: $affectedParticipations")
+
+        for(affected in affectedParticipations) {
+            EventParticipations.update( { EventParticipations.id eq(affected.id) }) {
+                affected.type = ParticipationType.UNABLE_TO_ATTEND
+                mapUpdate(it, affected)
+            }
+        }
+
+        val availableMemberIDs: Set<Int> = deleted.map { it.memberId }.toSet()
+        EventParticipations
+            .deleteWhere{ EventParticipations.member inList(availableMemberIDs) and(EventParticipations.event inList(concurrentEvents)) }
+    }
+
     private fun add(event: Event) = transaction {
         event.validate()
         val id = Events.insertAndGetId {
             mapInsert(it, event)
         }.value
-        event.participation.forEach { ep ->
-            ep.eventId = id
-            EventParticipations.insert {
-                mapInsert(it, ep)
-            }
-        }
+        event.id = id
+        updateConcurrentAttendance(event, listOf())
         addInherentExpense(event, id)
+        addParticipations(event.participation.map { ep ->
+            ep.eventId = id
+            ep
+        })
         get(id)
     }
 
@@ -119,22 +171,22 @@ object EventService : BasicService<Event, Events>(Events) {
         }
         val previousParticipations = EventParticipations.select { EventParticipations.event eq id }.map(EventParticipations)
             .asMap { it.id!! to it }
+
+
+        // .first are the updated/created EPs, .second are to be deleted
         val result = RecordUtil.analyzeEntities(previousParticipations.values, event.participation)
+        updateConcurrentAttendance(event, result.second)
+
         result.first.forEach {
             it.eventId = id
             it.paid = previousParticipations[it.id]?.paid ?: false
         }
-        result.first.forEach { ep ->
-            if (ep.id == null) {
-                EventParticipations.insert { mapInsert(it, ep) }
-            } else {
-                EventParticipations.update({ EventParticipations.id eq ep.id!! }) {
-                    mapUpdate(it, ep)
-                }
-            }
-        }
+
+        addParticipations(result.first)
         addInherentExpense(event, id)
+
         EventParticipations.deleteWhere { EventParticipations.id inList result.second.map { it.id!! } }
+
         get(id)
     }
 
