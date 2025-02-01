@@ -2,6 +2,7 @@ package hr.askzg.routes
 
 import hr.askzg.db.EventType
 import hr.askzg.db.Member
+import hr.askzg.db.Event
 import hr.askzg.db.ParticipationType
 import hr.askzg.ddf
 import hr.askzg.service.MemberService
@@ -16,6 +17,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.Year
+import java.util.*
 
 fun Route.statistics() {
 
@@ -73,6 +75,14 @@ fun Route.statistics() {
         }
 
         route("total") {
+
+            get("statisticsV2") {
+                val y = Year.of(call.year())
+                val data = StatisticsService
+                    .getStatisticsV2(y, setOf(EventType.TRAINING, EventType.EVENT, EventType.OTHER))
+                call.respond(data)
+            }
+
             get("member/{id}") {
                 val id = call.pathId()
                 val years = (2014..Year.now().value).map { Year.of(it) }.toSortedSet()
@@ -142,4 +152,29 @@ class MemberTotalStatistics {
     var member: MemberExtendedData? = null
     var activeDays: Int = 0
     var participations: List<MemberYearParticipation> = listOf()
+}
+
+class EventCountsV2 {
+    var attended: Int = 0
+    var pct: Float = 0F
+}
+
+class MemberEventStatisticV2 {
+    var memberId: Int = 0
+    var attendance: Map<EventType, EventCountsV2> = EnumMap(hr.askzg.db.EventType::class.java)
+    var adjustedAttendance: EventCountsV2 = EventCountsV2()
+}
+
+class EventBreakdownV2 {
+    var eventId: Int = 0
+    var attendedMemberIds: Set<Int> = setOf()
+    var missedMemberIds: Set<Int> = setOf()
+    var attendedPct: Float = 0F
+}
+
+class StatisticsV2 {
+    var members: List<Member> = listOf()
+    var events: List<Event> = listOf()
+    var eventBreakdowns: Map<EventType, List<EventBreakdownV2>> = EnumMap(hr.askzg.db.EventType::class.java)
+    var memberEventStatistics: List<MemberEventStatisticV2> = listOf()
 }

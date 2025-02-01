@@ -1,14 +1,15 @@
 package hr.askzg.service
 
 import hr.askzg.db.*
-import hr.askzg.routes.MemberParticipationData
-import hr.askzg.routes.MemberStatisticsRequest
+import hr.askzg.routes.*
 import hr.askzg.util.asLocalDate
 import hr.askzg.util.asMap
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.exposedLogger
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Year
+import java.util.EnumMap
 
 object StatisticsService {
 
@@ -43,6 +44,58 @@ object StatisticsService {
                     events.filter { e -> memberParticipations[e.id!!] == null && data.couldAttendEvent(e.date.asLocalDate()) }
                 MemberParticipationData(data, attended, unable, missed)
             }.toList()
+        }
+    }
+
+    fun getStatisticsV2(year: Year, eventTypes: Set<EventType>) = transaction{
+        val members = MemberService.getMembersTemporalData().filter { it.wasActiveInYear(year) }
+        val eventsRaw = EventService.getByYear(year.value)
+            .filter { it.id != null }
+            .filter { it.type in eventTypes && it.includeInStatistics }
+        val events = eventsRaw.map { Pair(it.id, it) }.toMap()
+        // val timeline = EventTimeline(eventsRaw)
+        val participations = EventParticipations
+            .select { EventParticipations.event inList events.values.ids() and (EventParticipations.type eq ParticipationType.ATTENDED) }
+            .map(EventParticipations)
+        val participationPerMember = participations.groupBy { it.memberId }
+        val participationPerEvent = participations.groupBy { it.eventId }
+        val eventByType = events.values.groupBy { it.type }
+
+        val eventBreakdownsCalculated = eventByType.map { (eventType, groupedEvents) ->
+            eventType to groupedEvents.map { event ->
+                val eventParticipations = participationPerEvent[event.id!!] ?: listOf()
+                val attendedIds = eventParticipations.map {it.memberId }.toSet()
+                val missedIds = members.map { it.member.id!! }.filter { !attendedIds.contains(it) }.toSet()
+                EventBreakdownV2().apply {
+                    eventId = event.id!!
+                    attendedMemberIds = attendedIds
+                    missedMemberIds = missedIds
+                    attendedPct = attendedIds.size.toFloat() / members.size.toFloat() * 100F
+                }
+            }
+        }.toMap()
+
+        val memberEventStatisticsCalculated = participationPerMember.map{(member, participations) ->
+            val typeToAttendance = participations
+                .map { events[it.eventId]!! }
+                .groupBy { it.type }
+                .map{(et, ees) -> et to EventCountsV2().apply {
+                    attended = ees.size
+                    pct = ees.size.toFloat() / eventByType[et]!!.size.toFloat() * 100
+                }}
+                .toMap()
+            MemberEventStatisticV2().apply{
+                memberId = member
+                attendance = typeToAttendance
+                adjustedAttendance = EventCountsV2()
+            }
+        }
+
+        StatisticsV2().apply result@{
+            this@result.members = members.map { it.member }
+            this@result.events = events.values.toList()
+            eventBreakdowns = eventBreakdownsCalculated
+            memberEventStatistics = memberEventStatisticsCalculated
         }
     }
 }

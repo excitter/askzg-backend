@@ -235,18 +235,45 @@ class Event : Entity() {
     lateinit var endDate: DateTime
     var price: Int? = null
     var participation: List<EventParticipation> = listOf()
-    var expenses: List<EventExpense> = listOf()
     var includeInStatistics: Boolean = true
 
     fun validate() {
         require(endDate >= date) { "End date must be greater than or equal to start date" }
     }
 
-    fun addExpense(expense: EventExpense) {
-        expenses += expense
-    }
+    // fun before(other: Event): Boolean {
+    //     return endDate < other.date
+    // }
+
+    // fun after(other: Event): Boolean {
+    //     return date > other.endDate
+    // }
+
+    // fun intersects(other: Event): Boolean {
+    //     val after = after(other)
+    //     val before = before(other)
+    //     return after && !before || !after && before
+    // }
 
 }
+
+// class EventTimeline {
+//     var events: List<Event> = listOf()
+//
+//     constructor(events: List<Event>) {
+//         this.events = events.sortedBy { it.date }
+//     }
+//
+//     fun getConcurrentEvents(event: Event): List<Event> {
+//         var retval: MutableList<Event> = mutableListOf()
+//         for(other in events) {
+//             if (event.equals(other)) continue
+//             if (event.before(other)) break
+//             if (event.intersects(other)) retval.add(other)
+//         }
+//         return retval
+//     }
+// }
 
 
 class EventExpense : Entity() {
