@@ -123,7 +123,6 @@ object StatisticsService {
             MemberEventStatisticV2().apply{
                 memberId = member
                 attendance = typeToAttendance
-                adjustedAttendance = EventCountsV2()
             }
         }
 

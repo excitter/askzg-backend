@@ -166,7 +166,6 @@ class EventCountsV2 {
 class MemberEventStatisticV2 {
     var memberId: Int = 0
     var attendance: Map<EventType, EventCountsV2> = EnumMap(hr.askzg.db.EventType::class.java)
-    var adjustedAttendance: EventCountsV2 = EventCountsV2()
 }
 
 class EventBreakdownV2 {
