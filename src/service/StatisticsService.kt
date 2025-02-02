@@ -53,10 +53,11 @@ object StatisticsService {
             .filter { it.id != null }
             .filter { it.type in eventTypes && it.includeInStatistics }
         val events = eventsRaw.map { Pair(it.id, it) }.toMap()
-        // val timeline = EventTimeline(eventsRaw)
+
         val participations = EventParticipations
-            .select { EventParticipations.event inList events.values.ids() and (EventParticipations.type eq ParticipationType.ATTENDED) }
+            .select { EventParticipations.event inList events.values.ids() }
             .map(EventParticipations)
+
         val participationPerMember = participations.groupBy { it.memberId }
         val participationPerEvent = participations.groupBy { it.eventId }
         val eventByType = events.values.groupBy { it.type }
@@ -64,25 +65,60 @@ object StatisticsService {
         val eventBreakdownsCalculated = eventByType.map { (eventType, groupedEvents) ->
             eventType to groupedEvents.map { event ->
                 val eventParticipations = participationPerEvent[event.id!!] ?: listOf()
-                val attendedIds = eventParticipations.map {it.memberId }.toSet()
+                val groupedParticipations = eventParticipations.groupBy { it.type }
+                val attendedIds = groupedParticipations[ParticipationType.ATTENDED]
+                    ?.map {it.memberId }
+                    ?.toSet()
+                    ?: setOf()
+                val unableIds = groupedParticipations[ParticipationType.UNABLE_TO_ATTEND]
+                    ?.map {it.memberId }
+                    ?.toSet()
+                    ?: setOf()
                 val missedIds = members.map { it.member.id!! }.filter { !attendedIds.contains(it) }.toSet()
                 EventBreakdownV2().apply {
                     eventId = event.id!!
                     attendedMemberIds = attendedIds
                     missedMemberIds = missedIds
-                    attendedPct = attendedIds.size.toFloat() / members.size.toFloat() * 100F
+                    unableToAttendMemberIds = unableIds
+                    if (members.isNotEmpty()) {
+                        attendedPct = attendedIds.size.toFloat() / members.size.toFloat() * 100F
+                    }
+                    if((members.size - unableIds.size) != 0) {
+                        adjustedPct = attendedIds.size.toFloat() / (members.size - unableIds.size).toFloat() * 100F
+                    }
                 }
             }
         }.toMap()
 
         val memberEventStatisticsCalculated = participationPerMember.map{(member, participations) ->
-            val typeToAttendance = participations
-                .map { events[it.eventId]!! }
-                .groupBy { it.type }
-                .map{(et, ees) -> et to EventCountsV2().apply {
-                    attended = ees.size
-                    pct = ees.size.toFloat() / eventByType[et]!!.size.toFloat() * 100
-                }}
+            val participationsByType = participations.groupBy { it.type }
+
+            val attendedParticipations = participationsByType[ParticipationType.ATTENDED] ?: listOf()
+            val couldntParticipations = participationsByType[ParticipationType.UNABLE_TO_ATTEND] ?: listOf()
+
+            val attendedByType = attendedParticipations.map { events[it.eventId]!! }.groupBy { it.type }
+            val couldnAttendByType = couldntParticipations.map { events[it.eventId]!! }.groupBy { it.type }
+
+            val typeToAttendance = arrayOf(EventType.EVENT, EventType.TRAINING, EventType.OTHER)
+                .map{et ->
+                    val eventsCount = eventByType[et]?.size ?: 0
+                    val memberAttended = attendedByType[et]?.size ?: 0
+                    val memberCouldntAttended = couldnAttendByType[et]?.size ?: 0
+                    if (eventsCount == 0){
+                        et to EventCountsV2()
+                    }
+                    else {
+                        et to EventCountsV2().apply {
+                            attended = memberAttended
+                            didntAttend = eventsCount - (memberAttended + memberCouldntAttended)
+                            couldntAttend = memberCouldntAttended
+                            totalPct =  memberAttended.toFloat() / eventsCount.toFloat() * 100
+                            if (eventsCount != memberCouldntAttended) {
+                                possiblePct = memberAttended.toFloat() / (eventsCount - memberCouldntAttended).toFloat() * 100
+                            }
+                        }
+                    }
+                }
                 .toMap()
             MemberEventStatisticV2().apply{
                 memberId = member

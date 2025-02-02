@@ -155,8 +155,12 @@ class MemberTotalStatistics {
 }
 
 class EventCountsV2 {
+    // event type breakdown per user
     var attended: Int = 0
-    var pct: Float = 0F
+    var didntAttend: Int = 0
+    var couldntAttend: Int = 0
+    var totalPct: Float? = null
+    var possiblePct: Float? = null
 }
 
 class MemberEventStatisticV2 {
@@ -169,7 +173,9 @@ class EventBreakdownV2 {
     var eventId: Int = 0
     var attendedMemberIds: Set<Int> = setOf()
     var missedMemberIds: Set<Int> = setOf()
-    var attendedPct: Float = 0F
+    var unableToAttendMemberIds: Set<Int> = setOf()
+    var attendedPct: Float? = null
+    var adjustedPct: Float? = null
 }
 
 class StatisticsV2 {
