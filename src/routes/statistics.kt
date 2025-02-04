@@ -159,8 +159,8 @@ class EventCountsV2 {
     var attended: Int = 0
     var didntAttend: Int = 0
     var couldntAttend: Int = 0
-    var totalPct: Float? = null
-    var possiblePct: Float? = null
+    var totalPct: BigDecimal? = null
+    var possiblePct: BigDecimal? = null
 }
 
 class MemberEventStatisticV2 {
@@ -173,13 +173,13 @@ class EventBreakdownV2 {
     var attendedMemberIds: Set<Int> = setOf()
     var missedMemberIds: Set<Int> = setOf()
     var unableToAttendMemberIds: Set<Int> = setOf()
-    var attendedPct: Float? = null
-    var adjustedPct: Float? = null
+    var attendedPct: BigDecimal? = null
+    var adjustedPct: BigDecimal? = null
 }
 
 class StatisticsV2 {
-    var members: List<Member> = listOf()
-    var events: List<Event> = listOf()
+    var members: Map<Int, Member> = mapOf()
+    var events: Map<Int, Event> = mapOf()
     var eventBreakdowns: Map<EventType, List<EventBreakdownV2>> = EnumMap(hr.askzg.db.EventType::class.java)
     var memberEventStatistics: List<MemberEventStatisticV2> = listOf()
 }

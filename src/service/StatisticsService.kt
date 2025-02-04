@@ -5,11 +5,12 @@ import hr.askzg.routes.*
 import hr.askzg.util.asLocalDate
 import hr.askzg.util.asMap
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.exposedLogger
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.math.RoundingMode.HALF_EVEN
 import java.time.Year
-import java.util.EnumMap
 
 object StatisticsService {
 
@@ -81,10 +82,10 @@ object StatisticsService {
                     missedMemberIds = missedIds
                     unableToAttendMemberIds = unableIds
                     if (members.isNotEmpty()) {
-                        attendedPct = attendedIds.size.toFloat() / members.size.toFloat() * 100F
+                        attendedPct = BigDecimal(attendedIds.size.toDouble() / members.size.toDouble() * 100).setScale(2, HALF_EVEN)
                     }
                     if((members.size - unableIds.size) != 0) {
-                        adjustedPct = attendedIds.size.toFloat() / (members.size - unableIds.size).toFloat() * 100F
+                        adjustedPct = BigDecimal(attendedIds.size.toDouble() / (members.size - unableIds.size).toDouble() * 100).setScale(2, HALF_EVEN)
                     }
                 }
             }
@@ -112,9 +113,9 @@ object StatisticsService {
                             attended = memberAttended
                             didntAttend = eventsCount - (memberAttended + memberCouldntAttended)
                             couldntAttend = memberCouldntAttended
-                            totalPct =  memberAttended.toFloat() / eventsCount.toFloat() * 100
+                            totalPct =  BigDecimal(memberAttended.toDouble() / eventsCount.toDouble() * 100).setScale(2, HALF_EVEN)
                             if (eventsCount != memberCouldntAttended) {
-                                possiblePct = memberAttended.toFloat() / (eventsCount - memberCouldntAttended).toFloat() * 100
+                                possiblePct = BigDecimal(memberAttended.toDouble() / (eventsCount - memberCouldntAttended).toDouble() * 100).setScale(2, HALF_EVEN)
                             }
                         }
                     }
@@ -127,8 +128,8 @@ object StatisticsService {
         }
 
         StatisticsV2().apply result@{
-            this@result.members = members.map { it.member }
-            this@result.events = events.values.toList()
+            this@result.members = members.map { it.member.id!!.toInt() to it.member }.toMap()
+            this@result.events = events.map { (key, value) -> key!!.toInt() to value }.toMap()
             eventBreakdowns = eventBreakdownsCalculated
             memberEventStatistics = memberEventStatisticsCalculated
         }
