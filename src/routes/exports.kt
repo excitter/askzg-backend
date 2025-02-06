@@ -86,6 +86,15 @@ fun Route.exports() {
             }
         }
 
+        get("statisticsV2") { _ ->
+            val year = Year.of(call.year())
+            val statisticsV2 = StatisticsService.getStatisticsV2(year, setOf(EventType.TRAINING, EventType.EVENT, EventType.OTHER))
+            call.response.header("Content-Disposition", "attachment; filename=statistika-$year.pdf")
+            call.respondOutputStream {
+                StatisticsV2PdfCreator(statisticsV2, year.value).streamTo(this)
+            }
+        }
+
     }
 }
 

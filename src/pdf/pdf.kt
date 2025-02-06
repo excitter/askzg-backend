@@ -11,7 +11,7 @@ import java.time.Month
 
 val titleFont: Font = font(36)
 val headerFont: Font = font(12, Font.BOLD)
-val contentFont: Font = font(10)
+val contentFont: Font = font(9)
 
 abstract class PdfCreator(private val title: String) {
 
