@@ -10,7 +10,7 @@ import util.RecordUtil
 import java.math.BigDecimal
 
 
-fun calculateExpense(event: Event): Payment {
+fun calculateExpense(event: Event, ts: DateTime): Payment {
     val totalParticipants = event.participation.size
     val eventPrice = event.price ?: 0
     val totalCost = - BigDecimal(totalParticipants * eventPrice)
@@ -23,7 +23,7 @@ fun calculateExpense(event: Event): Payment {
         membershipId = null
         eventParticipationId = null
         productParticipationId = null
-        timestamp= event.date.millis
+        timestamp= ts.millis
         canEdit = false
     }
 }
@@ -84,9 +84,9 @@ object EventService : BasicService<Event, Events>(Events) {
             .toList()
     }
 
-    private fun addInherentExpense(event: Event, eId: Int) = transaction {
+    private fun addInherentExpense(event: Event, eId: Int, now: DateTime) = transaction {
         if (event.price != null && event.price != 0) {
-            val cost = calculateExpense(event)
+            val cost = calculateExpense(event, now)
             val costId = Payments.insertAndGetId {
                 mapInsert(it, cost)
             }.value
@@ -146,13 +146,14 @@ object EventService : BasicService<Event, Events>(Events) {
     }
 
     private fun add(event: Event) = transaction {
+        val now = DateTime.now()
         event.validate()
         val id = Events.insertAndGetId {
             mapInsert(it, event)
         }.value
         event.id = id
         updateConcurrentAttendance(event, listOf())
-        addInherentExpense(event, id)
+        addInherentExpense(event, id, now)
         addParticipations(event.participation.map { ep ->
             ep.eventId = id
             ep
@@ -162,6 +163,7 @@ object EventService : BasicService<Event, Events>(Events) {
 
     private fun update(event: Event) = transaction {
         event.validate()
+        val now = DateTime.now()
         val id = event.id!!
 
         clearInherentExpenses(id)
@@ -183,7 +185,7 @@ object EventService : BasicService<Event, Events>(Events) {
         }
 
         addParticipations(result.first)
-        addInherentExpense(event, id)
+        addInherentExpense(event, id, now)
 
         EventParticipations.deleteWhere { EventParticipations.id inList result.second.map { it.id!! } }
 
