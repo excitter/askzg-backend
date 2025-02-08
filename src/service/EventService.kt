@@ -116,22 +116,22 @@ object EventService : BasicService<Event, Events>(Events) {
     private fun updateConcurrentAttendance(event: Event, deleted: List<EventParticipation>) {
         // every user whos participation in this event is ATTENDED
         // will have their participation in the concurrent events set to UNABLE_TO_ATTEND
-        exposedLogger.error("Updating for: ${event.id} ${event.name}")
+        exposedLogger.debug("Updating for: ${event.id} ${event.name}")
 
         val concurrentEvents: Set<Int> = getConcurrentEvents(event).map { it.id!! }.toSet()
         if (concurrentEvents.size == 0) return
-        exposedLogger.error("Concurrent events: ${concurrentEvents}")
+        exposedLogger.debug("Concurrent events: ${concurrentEvents}")
 
         val attendingMemberIDs: Set<Int> = event.participation
             .filter { it.type == ParticipationType.ATTENDED }
             .map { it.memberId }
             .toSet()
-        exposedLogger.error("Attending members: ${attendingMemberIDs}")
+        exposedLogger.debug("Attending members: ${attendingMemberIDs}")
 
         val affectedParticipations = EventParticipations
             .select{ EventParticipations.member inList(attendingMemberIDs) and(EventParticipations.event inList(concurrentEvents))}
             .map(EventParticipations)
-        exposedLogger.error("Affected participations: $affectedParticipations")
+        exposedLogger.debug("Affected participations: $affectedParticipations")
 
         for(affected in affectedParticipations) {
             EventParticipations.update( { EventParticipations.id eq(affected.id) }) {
