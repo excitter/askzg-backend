@@ -18,7 +18,7 @@ fun calculateExpense(event: Event, ts: DateTime): Payment {
 
     return Payment().apply {
         amount = totalCost
-        date = event.date
+        date = ts
         comment = info
         membershipId = null
         eventParticipationId = null
