@@ -256,40 +256,7 @@ class Event : Entity() {
     fun validate() {
         require(endDate >= date) { "End date must be greater than or equal to start date" }
     }
-
-    // fun before(other: Event): Boolean {
-    //     return endDate < other.date
-    // }
-
-    // fun after(other: Event): Boolean {
-    //     return date > other.endDate
-    // }
-
-    // fun intersects(other: Event): Boolean {
-    //     val after = after(other)
-    //     val before = before(other)
-    //     return after && !before || !after && before
-    // }
-
 }
-
-// class EventTimeline {
-//     var events: List<Event> = listOf()
-//
-//     constructor(events: List<Event>) {
-//         this.events = events.sortedBy { it.date }
-//     }
-//
-//     fun getConcurrentEvents(event: Event): List<Event> {
-//         var retval: MutableList<Event> = mutableListOf()
-//         for(other in events) {
-//             if (event.equals(other)) continue
-//             if (event.before(other)) break
-//             if (event.intersects(other)) retval.add(other)
-//         }
-//         return retval
-//     }
-// }
 
 
 class EventExpense : Entity() {
@@ -416,6 +383,7 @@ object Payments : AppTable<Payment>("payments") {
         ReferenceOption.SET_NULL
     ).nullable()
     val eventParticipation = reference("event_participation_id", EventParticipations, ReferenceOption.SET_NULL, ReferenceOption.SET_NULL).nullable()
+    val transientExpense = bool("transient_expense")
 
     override fun map(row: ResultRow) = Payment().apply {
         id = row[Payments.id].value
@@ -426,6 +394,7 @@ object Payments : AppTable<Payment>("payments") {
         productParticipationId = row[productParticipation]?.value
         eventParticipationId = row[eventParticipation]?.value
         timestamp = row[Payments.date].millis
+        transientExpense = row[Payments.transientExpense]
         canEdit = membershipId == null && productParticipationId == null && eventParticipationId == null
     }
 
@@ -433,6 +402,7 @@ object Payments : AppTable<Payment>("payments") {
         stmt[amount] = entity.amount
         stmt[date] = entity.date
         stmt[comment] = entity.comment
+        stmt[transientExpense] = entity.transientExpense
         entity.membershipId?.let {
             stmt[membership] = EntityID(it, Memberships)
         }
@@ -453,6 +423,7 @@ class Payment : Entity() {
     var productParticipationId: Int? = null
     var eventParticipationId: Int? = null
     var timestamp: Long? = null
+    var transientExpense: Boolean = false
     var canEdit: Boolean = false
 }
 

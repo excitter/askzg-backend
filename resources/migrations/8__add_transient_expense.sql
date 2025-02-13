@@ -1,0 +1,2 @@
+ALTER TABLE payments
+ADD COLUMN transient_expense BOOLEAN NOT NULL DEFAULT FALSE;

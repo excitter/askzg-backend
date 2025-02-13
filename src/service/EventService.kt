@@ -25,6 +25,7 @@ fun calculateExpense(event: Event, ts: DateTime): Payment {
         productParticipationId = null
         timestamp= ts.millis
         canEdit = false
+        transientExpense = true
     }
 }
 
@@ -87,12 +88,10 @@ object EventService : BasicService<Event, Events>(Events) {
     private fun addInherentExpense(event: Event, eId: Int, now: DateTime) = transaction {
         if (event.price != null && event.price != 0) {
             val cost = calculateExpense(event, now)
-            val costId = Payments.insertAndGetId {
-                mapInsert(it, cost)
-            }.value
+            val savedCost = PaymentService.save(cost)
             val expense = EventExpense().apply {
                 eventId = eId
-                paymentId = costId
+                paymentId = savedCost.id!!
                 autoCalculated = true
             }
             EventExpenses.insert {
@@ -211,6 +210,7 @@ object EventService : BasicService<Event, Events>(Events) {
                     date = DateTime.now()
                     comment = "UDIO ${member.name} - ${event.name}"
                     eventParticipationId = participation.id
+                    transientExpense = true
                 })
             }
         }
