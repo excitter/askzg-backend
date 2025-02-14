@@ -42,13 +42,14 @@ fun Route.exports() {
             val year = call.year()
             val income = call.boolParam("income")
             val expense = call.boolParam("expense")
+            val includeTransient = call.boolParam("includeTransient")
             val format = call.param("word")
 
             var title = "promet"
             if (income && !expense) title = "promet"
             if (!income && expense) title = "promet"
 
-            val filter = paymentFilter(income, expense, format)
+            val filter = paymentFilter(income, expense, includeTransient, format)
             val interval = yearRange(year, DateTime.now())
             val payments = PaymentService.getFiltered(interval.first, interval.second)
             val balance = PaymentService.getBalance(interval.first)
@@ -102,6 +103,8 @@ fun memberFilter(member: Boolean, recruit: Boolean, inactive: Boolean): (Member)
     (member && it.status == Status.MEMBER) || (recruit && it.status == Status.RECRUIT) || (inactive && it.status == Status.INACTIVE)
 }
 
-fun paymentFilter(income: Boolean, expense: Boolean, word: String?): (Payment) -> Boolean = {
-    (income && it.amount >= BigDecimal.ZERO || expense && it.amount < BigDecimal.ZERO) && (word == null || it.comment.toLowerCase().contains(word.toLowerCase()))
+fun paymentFilter(income: Boolean, expense: Boolean, transient: Boolean, word: String?): (Payment) -> Boolean = {
+    (income && it.amount >= BigDecimal.ZERO || expense && it.amount < BigDecimal.ZERO) &&
+    !(!transient && it.transientExpense) &&
+    (word == null || it.comment.toLowerCase().contains(word.toLowerCase()))
 }
