@@ -107,6 +107,10 @@ fun paragraph(text: String, spacingAfter: Int? = null) = Paragraph(Chunk(text, c
     if (spacingAfter != null) this.spacingAfter = spacingAfter.toFloat()
 }
 
+fun titleParagraph(text: String, spacingAfter: Int? = null) = Paragraph(Chunk(text, titleFont)).apply {
+    if (spacingAfter != null) this.spacingAfter = spacingAfter.toFloat()
+}
+
 fun font(size: Int, weight: Int = Font.NORMAL): Font =
     FontFactory.getFont(FontFactory.COURIER, "Cp1250", size.toFloat(), weight, BaseColor.BLACK)
 

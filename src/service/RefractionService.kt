@@ -6,13 +6,21 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
+import java.time.Year
 
 object RefractionService : BasicService<Refraction, Refractions>(Refractions) {
 
-    fun getReport(onlyActive: Boolean): List<RefractionReport> {
-        val refractions = getAll().groupBy { it.memberId }
-        return MemberService.getMembersTemporalData()
-            .filter { if (!onlyActive) true else it.member.status != Status.INACTIVE }
+    fun getInYear(year: Int): Map<Int, List<Refraction>> = transaction {
+        val from = DateTime(year, 1, 1, 0, 0)
+        val to = from.plusYears(1).minusSeconds(1)
+        Refractions.select { Refractions.createdAt.between(from, to) }.map(Refractions).groupBy { it.memberId }
+    }
+
+    fun getReport(onlyActive: Boolean, year: Int): List<RefractionReport> = transaction {
+        val refractions = getInYear(year)
+        val asYear = Year.of(year)
+        MemberService.getMembersTemporalData()
+            .filter { if (!onlyActive) true else (it.member.status != Status.INACTIVE ) }
             .map { member ->
                 val memberRefractions = (refractions[member.member.id] ?: emptyList())
                     .sortedByDescending { it.createdAt }

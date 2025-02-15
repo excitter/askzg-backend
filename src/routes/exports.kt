@@ -96,6 +96,16 @@ fun Route.exports() {
             }
         }
 
+        get("refractions") {
+            val onlyActive = call.boolParam("onlyActive")
+            val year = call.year()
+            val values = RefractionService.getReport(onlyActive, year)
+            call.response.header("Content-Disposition", "attachment; filename=kazne.pdf")
+            call.respondOutputStream {
+                RefractionsPdfCreator(values, year).streamTo(this)
+            }
+        }
+
     }
 }
 

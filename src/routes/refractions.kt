@@ -5,13 +5,16 @@ import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.response.*
 import io.ktor.routing.*
+import java.time.Year
 
 fun Route.refractions() {
 
     route("refractions") {
 
         get("report") {
-            call.respond(RefractionService.getReport(call.boolParam("onlyActive")))
+            val y = call.year()
+            val onlyActive = call.boolParam("onlyActive")
+            call.respond(RefractionService.getReport(onlyActive, y))
         }
 
         get("report/member/{id}") {
