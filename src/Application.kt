@@ -104,6 +104,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             exports()
             products()
             refractions()
+            quickpay()
         }
     }
 }
