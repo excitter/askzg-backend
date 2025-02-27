@@ -43,6 +43,7 @@ fun Route.users() {
         }
 
         post {
+            call.userData(Role.ADMIN)
             val username = call.receive<AddUserRequest>().username
             val password = passwordGenerator()
             val passwordHash = PasswordHasher.hash(password)
