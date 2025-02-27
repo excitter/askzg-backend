@@ -12,6 +12,22 @@ import io.ktor.response.respond
 import io.ktor.routing.*
 import util.PasswordHasher
 import java.time.Year
+import kotlin.random.Random
+
+fun passwordGenerator(): String {
+    val LENGTH = 16
+    val charGroups = listOf('A'..'Z', 'a'..'z', '0'..'9').map { it.joinToString("") } + "!?{}~+\$&#@%"
+    val allowed = charGroups.joinToString("") // All symbols above
+    var password = "";
+    charGroups.forEach {
+        password += it.random()
+    }
+    val remaining = LENGTH - password.length
+    for (i in 1..remaining) {
+        password += allowed.random()
+    }
+    return password.toList().shuffled().joinToString("")
+}
 
 fun Route.users() {
 
@@ -28,13 +44,21 @@ fun Route.users() {
 
         post {
             val username = call.receive<AddUserRequest>().username
-            val password = PasswordHasher.hash(username + Year.now().value)
-            call.respond(UserService.save(User().apply {
+            val password = passwordGenerator()
+            val passwordHash = PasswordHasher.hash(password)
+            val created = UserService.save(User().apply {
                 this.username = username
-                this.password = password
+                this.password = passwordHash
                 this.role = Role.USER
                 this.page = UserDefaultPage.MEMBERS
-            }))
+            })
+            call.respond(UserAddedResponse().apply {
+                this.id = created.id!!
+                this.username = username
+                this.role = created.role.toString()
+                this.page = created.page.toString()
+                this.password = password
+            })
         }
 
         put("current/password") {
@@ -42,10 +66,13 @@ fun Route.users() {
             val user = UserService.get(call.userData().id).takeIf {
                 PasswordHasher.isPasswordValid(request.old, it.password)
             } ?: throw AuthenticationException()
-            user.password = PasswordHasher.hash(request.new)
-            UserService.save(user)
-            call.respond(HttpStatusCode.OK)
-
+            if (request.new.length < 8) {
+                call.respond(HttpStatusCode.BadRequest)
+            } else {
+                user.password = PasswordHasher.hash(request.new)
+                UserService.save(user)
+                call.respond(HttpStatusCode.OK)
+            }
         }
 
         put("current") {
@@ -64,6 +91,14 @@ fun Route.users() {
 
 class AddUserRequest {
     lateinit var username: String
+}
+
+class UserAddedResponse {
+    var id: Int = -1
+    lateinit var username: String
+    lateinit var page: String
+    lateinit var role: String
+    lateinit var password: String
 }
 
 class ChangeUserPageRequest {
