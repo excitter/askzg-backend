@@ -51,6 +51,7 @@ object RefractionService : BasicService<Refraction, Refractions>(Refractions) {
                     date = DateTime.now()
                     amount = "4".toBigDecimal().setScale(2)
                     comment = "Kazna -  ${member.name}"
+                    refractionId = refraction.id
                 }
                 PaymentService.save(payment)
                 return@transaction

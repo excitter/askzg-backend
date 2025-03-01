@@ -50,6 +50,11 @@ object PaymentService : BasicService<Payment, Payments>(Payments) {
                 it[paid] = false
             }
         }
+        existing.refractionId?.let {m ->
+            Refractions.update({ Refractions.id eq m }) {
+                it[paid] = false
+            }
+        }
         Payments.deleteWhere { Payments.id eq id }
     }
 }

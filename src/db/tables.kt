@@ -383,6 +383,7 @@ object Payments : AppTable<Payment>("payments") {
         ReferenceOption.SET_NULL
     ).nullable()
     val eventParticipation = reference("event_participation_id", EventParticipations, ReferenceOption.SET_NULL, ReferenceOption.SET_NULL).nullable()
+    val refraction = reference("refraction_id", Refractions, ReferenceOption.SET_NULL, ReferenceOption.SET_NULL).nullable()
     val transientExpense = bool("transient_expense")
 
     override fun map(row: ResultRow) = Payment().apply {
@@ -393,6 +394,7 @@ object Payments : AppTable<Payment>("payments") {
         membershipId = row[membership]?.value
         productParticipationId = row[productParticipation]?.value
         eventParticipationId = row[eventParticipation]?.value
+        refractionId = row[refraction]?.value
         timestamp = row[Payments.date].millis
         transientExpense = row[Payments.transientExpense]
         canEdit = membershipId == null && productParticipationId == null && eventParticipationId == null
@@ -412,6 +414,9 @@ object Payments : AppTable<Payment>("payments") {
         entity.eventParticipationId?.let {
             stmt[eventParticipation] = EntityID(it, EventParticipations)
         }
+        entity.refractionId?.let {
+            stmt[refraction] = EntityID(it, Refractions)
+        }
     }
 }
 
@@ -419,9 +424,12 @@ class Payment : Entity() {
     var amount: BigDecimal = BigDecimal.ZERO
     lateinit var date: DateTime
     var comment = ""
+
     var membershipId: Int? = null
     var productParticipationId: Int? = null
     var eventParticipationId: Int? = null
+    var refractionId: Int? = null
+
     var timestamp: Long? = null
     var transientExpense: Boolean = false
     var canEdit: Boolean = false
